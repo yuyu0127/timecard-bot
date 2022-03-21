@@ -5,7 +5,6 @@ import { promises as fs } from 'fs';
 
 const settingFilePath = './setting.json';
 const settingFileEncoding = 'utf-8';
-const client = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES, Intents.FLAGS.GUILD_VOICE_STATES] });
 const commands: ApplicationCommandDataResolvable[] = [
   {
     name: 'set-notify-channel',
@@ -28,6 +27,9 @@ type Setting = {
     [guildId: string]: string
   }
 };
+
+
+const client = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES, Intents.FLAGS.GUILD_VOICE_STATES] });
 
 client.on('ready', (client) => {
   console.log(`logged in as ${client.user.username}`);
