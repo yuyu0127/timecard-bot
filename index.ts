@@ -1,5 +1,5 @@
 // discord.js モジュールのインポート
-import { Client, Intents, ApplicationCommandDataResolvable } from 'discord.js';
+import { Client, Intents, ApplicationCommandDataResolvable, Guild, AnyChannel, TextBasedChannel } from 'discord.js';
 import { token } from './config.json';
 import { promises as fs } from 'fs';
 
@@ -65,15 +65,25 @@ client.on('interactionCreate', async (interaction) => {
   }
 });
 
-client.on('voiceStateUpdate', (oldState, newState) => {
-  if (oldState.channel && !newState.channel) {
-    console.log('disconnected from ' + oldState.channel);
+client.on('voiceStateUpdate', async (oldState, newState) => {
+  const oldChannel = oldState.channel;
+  const newChannel = newState.channel;
+  const notifyChannel = await fetchNotifyChannel(newState.guild);
+
+  // 入室
+  if (!oldChannel && newChannel) {
+    console.log('connected to ' + newChannel);
+    notifyChannel?.send(`${newState.member} が ${newChannel} に入室したよ！`);
   }
-  else if (!oldState.channel && newState.channel) {
-    console.log('connected to ' + newState.channel);
+  // 退室
+  if (oldChannel && !newChannel) {
+    console.log('disconnected from ' + oldChannel);
+    notifyChannel?.send(`${newState.member} が ${oldChannel} から退室したよ！`);
   }
-  else if (oldState.channel && newState.channel) {
-    console.log(`moved from ${oldState.channel} to ${newState.channel}`);
+  // 移動
+  if (oldChannel && newChannel) {
+    console.log(`moved from ${oldChannel} to ${newChannel}`);
+    notifyChannel?.send(`${newState.member} が ${oldChannel} から ${newChannel} に移動したよ！`);
   }
 });
 
@@ -83,4 +93,21 @@ function setupCommand(client: Client<true>) {
   client.guilds.cache.forEach(async (guild) => {
     await client.application.commands.set(commands, guild.id);
   });
+}
+
+async function fetchNotifyChannel(guild: Guild): Promise<TextBasedChannel | null> {
+  let setting: Setting;
+  try {
+    const data = await fs.readFile(settingFilePath, settingFileEncoding);
+    setting = JSON.parse(data);
+    const channelId = setting.channelTable[guild.id];
+    const channel = client.channels.cache.get(channelId);
+    if (channel && channel?.isText()) {
+      return channel;
+    } else {
+      return null;
+    }
+  } catch {
+    return null;
+  }
 }
