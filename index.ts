@@ -88,7 +88,7 @@ client.on('voiceStateUpdate', async (oldState, newState) => {
   // 退室
   if (oldChannel && !newChannel) {
     console.log('disconnected from ' + oldChannel);
-    notifyChannel?.send(`${newState.member} が ${oldChannel} から退室したよ！`);
+    notifyChannel?.send(`${oldState.member} が ${oldChannel} から退室したよ！`);
   }
   // 移動
   if (oldChannel && newChannel && oldChannel.id != newChannel.id) {
