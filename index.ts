@@ -2,6 +2,10 @@ import { Client, Intents, ApplicationCommandDataResolvable, Guild, TextBasedChan
 import { token } from './config.json';
 import { promises as fs } from 'fs';
 
+const defaultJoinMessageTemplate = '{member} が {channel} に入室したよ！';
+const defaultLeaveMessageTemplate = '{member} が {channel} から退室したよ！';
+const defaultMoveMessageTemplate = '{member} が {oldChannel} から {newChannel} に移動したよ！';
+
 const settingFilePath = './setting.json';
 const settingFileEncoding = 'utf-8';
 const commands: ApplicationCommandDataResolvable[] = [
@@ -80,6 +84,9 @@ async function respondToSetNotifyChannelCommand(interaction: CommandInteraction<
 async function sendNotification(oldState: VoiceState, newState: VoiceState) {
   const oldChannel = oldState.channel;
   const newChannel = newState.channel;
+  const oldMember = oldState.member;
+  const newMember = newState.member;
+
   const notifyChannel = await fetchNotifyChannel(newState.guild);
 
   if (!notifyChannel) {
@@ -91,19 +98,31 @@ async function sendNotification(oldState: VoiceState, newState: VoiceState) {
   }
 
   // 入室
-  if (!oldChannel && newChannel) {
+  if (!oldChannel && newChannel && newMember) {
     console.log('connected to ' + newChannel);
-    notifyChannel?.send(`${newState.member} が ${newChannel} に入室したよ！`);
+    const message = defaultJoinMessageTemplate
+      .replace('{member}', newState.member?.toString())
+      .replace('{channel}', newChannel.toString());
+    notifyChannel?.send(message);
   }
+
   // 退室
-  if (oldChannel && !newChannel) {
+  if (oldChannel && !newChannel && oldMember) {
     console.log('disconnected from ' + oldChannel);
-    notifyChannel?.send(`${oldState.member} が ${oldChannel} から退室したよ！`);
+    const message = defaultLeaveMessageTemplate
+      .replace('{member}', oldState.member?.toString())
+      .replace('{channel}', oldChannel.toString());
+    notifyChannel?.send(message);
   }
+
   // 移動
-  if (oldChannel && newChannel && oldChannel.id != newChannel.id) {
+  if (oldChannel && newChannel && oldChannel.id != newChannel.id && newMember) {
     console.log(`moved from ${oldChannel} to ${newChannel}`);
-    notifyChannel?.send(`${newState.member} が ${oldChannel} から ${newChannel} に移動したよ！`);
+    const message = defaultMoveMessageTemplate
+      .replace('{member}', newMember?.toString())
+      .replace('{oldChannel}', oldChannel.toString())
+      .replace('{newChannel}', newChannel.toString());
+    notifyChannel?.send(message);
   }
 }
 
