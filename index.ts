@@ -1,4 +1,4 @@
-import { Client, Intents, ApplicationCommandDataResolvable, Guild, TextBasedChannel, VoiceState } from 'discord.js';
+import { Client, Intents, ApplicationCommandDataResolvable, Guild, TextBasedChannel, VoiceState, CommandInteraction, CacheType } from 'discord.js';
 import { token } from './config.json';
 import { promises as fs } from 'fs';
 
@@ -39,31 +39,7 @@ client.on('interactionCreate', async (interaction) => {
   if (!interaction.isCommand()) return;
 
   if (interaction.commandName == "set-notify-channel") {
-    let json: Setting;
-    try {
-      const data = await fs.readFile(settingFilePath, settingFileEncoding);
-      json = JSON.parse(data);
-    } catch {
-      json = { channelTable: {} };
-    }
-    if (!json.channelTable) {
-      json.channelTable = {};
-    }
-
-    const key = interaction.guildId;
-    const channel = interaction.options.getChannel('チャンネル名');
-
-    if (key && channel) {
-      json.channelTable[key] = channel.id;
-
-      const text = JSON.stringify(json);
-      await fs.writeFile(settingFilePath, text, settingFileEncoding);
-
-      const reply = `入退室の情報を ${channel} に通知するように設定したよ！`;
-      await interaction.reply(reply);
-    } else {
-      await interaction.reply('通知チャンネルの設定に失敗しました…。');
-    }
+    await respondToSetNotifyChannelCommand(interaction);
   }
 });
 
@@ -72,6 +48,34 @@ client.on('voiceStateUpdate', async (oldState, newState) => {
 });
 
 client.login(token);
+
+async function respondToSetNotifyChannelCommand(interaction: CommandInteraction<CacheType>) {
+  let json: Setting;
+  try {
+    const data = await fs.readFile(settingFilePath, settingFileEncoding);
+    json = JSON.parse(data);
+  } catch {
+    json = { channelTable: {} };
+  }
+  if (!json.channelTable) {
+    json.channelTable = {};
+  }
+
+  const key = interaction.guildId;
+  const channel = interaction.options.getChannel('チャンネル名');
+
+  if (key && channel) {
+    json.channelTable[key] = channel.id;
+
+    const text = JSON.stringify(json);
+    await fs.writeFile(settingFilePath, text, settingFileEncoding);
+
+    const reply = `入退室の情報を ${channel} に通知するように設定したよ！`;
+    await interaction.reply(reply);
+  } else {
+    await interaction.reply('通知チャンネルの設定に失敗しました…。');
+  }
+}
 
 async function sendNotification(oldState: VoiceState, newState: VoiceState) {
   const oldChannel = oldState.channel;
