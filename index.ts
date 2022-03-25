@@ -1,4 +1,4 @@
-import { Client, Intents, ApplicationCommandDataResolvable, Guild, TextBasedChannel } from 'discord.js';
+import { Client, Intents, ApplicationCommandDataResolvable, Guild, TextBasedChannel, VoiceState } from 'discord.js';
 import { token } from './config.json';
 import { promises as fs } from 'fs';
 
@@ -68,6 +68,12 @@ client.on('interactionCreate', async (interaction) => {
 });
 
 client.on('voiceStateUpdate', async (oldState, newState) => {
+  await sendNotification(oldState, newState);
+});
+
+client.login(token);
+
+async function sendNotification(oldState: VoiceState, newState: VoiceState) {
   const oldChannel = oldState.channel;
   const newChannel = newState.channel;
   const notifyChannel = await fetchNotifyChannel(newState.guild);
@@ -95,12 +101,10 @@ client.on('voiceStateUpdate', async (oldState, newState) => {
     console.log(`moved from ${oldChannel} to ${newChannel}`);
     notifyChannel?.send(`${newState.member} が ${oldChannel} から ${newChannel} に移動したよ！`);
   }
-});
+}
 
-client.login(token);
-
-async function setupCommand(client: Client<true>) {
-  await client.application.commands.set(commands);
+function setupCommand(client: Client<true>) {
+  client.application.commands.set(commands);
 }
 
 async function fetchNotifyChannel(guild: Guild): Promise<TextBasedChannel | null> {
