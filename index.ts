@@ -1,5 +1,4 @@
-// discord.js モジュールのインポート
-import { Client, Intents, ApplicationCommandDataResolvable, Guild, AnyChannel, TextBasedChannel } from 'discord.js';
+import { Client, Intents, ApplicationCommandDataResolvable, Guild, TextBasedChannel } from 'discord.js';
 import { token } from './config.json';
 import { promises as fs } from 'fs';
 
@@ -47,6 +46,9 @@ client.on('interactionCreate', async (interaction) => {
     } catch {
       json = { channelTable: {} };
     }
+    if (!json.channelTable) {
+      json.channelTable = {};
+    }
 
     const key = interaction.guildId;
     const channel = interaction.options.getChannel('チャンネル名');
@@ -70,6 +72,14 @@ client.on('voiceStateUpdate', async (oldState, newState) => {
   const newChannel = newState.channel;
   const notifyChannel = await fetchNotifyChannel(newState.guild);
 
+  if (!notifyChannel) {
+    const guild = oldState.guild || newState.guild;
+    const textChannel = guild?.channels.cache.find(x => x.isText());
+    if (textChannel && textChannel?.isText()) {
+      textChannel.send('通知を有効にするには、はじめに `/set-notify-channel` コマンドで通知先を設定してね');
+    }
+  }
+
   // 入室
   if (!oldChannel && newChannel) {
     console.log('connected to ' + newChannel);
@@ -81,7 +91,7 @@ client.on('voiceStateUpdate', async (oldState, newState) => {
     notifyChannel?.send(`${newState.member} が ${oldChannel} から退室したよ！`);
   }
   // 移動
-  if (oldChannel && newChannel) {
+  if (oldChannel && newChannel && oldChannel.id != newChannel.id) {
     console.log(`moved from ${oldChannel} to ${newChannel}`);
     notifyChannel?.send(`${newState.member} が ${oldChannel} から ${newChannel} に移動したよ！`);
   }
@@ -89,10 +99,8 @@ client.on('voiceStateUpdate', async (oldState, newState) => {
 
 client.login(token);
 
-function setupCommand(client: Client<true>) {
-  client.guilds.cache.forEach(async (guild) => {
-    await client.application.commands.set(commands, guild.id);
-  });
+async function setupCommand(client: Client<true>) {
+  await client.application.commands.set(commands);
 }
 
 async function fetchNotifyChannel(guild: Guild): Promise<TextBasedChannel | null> {
